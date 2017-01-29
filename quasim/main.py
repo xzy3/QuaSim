@@ -14,10 +14,11 @@ def print_samples(I, hosts):
     for i in I:
         ihost = hosts[i]
 
+        variants = filter(lambda v: v.count() > 0, ihost.blood.variants)
         seqs = map(lambda (c, v):
                    SeqRecord.SeqRecord(Seq.Seq(v.seq, Seq.Alphabet.SingleLetterAlphabet()),
-                                       id="%i_%i" % (i, c), description="%i" % v.count()),
-                   enumerate(sorted(ihost.blood.variants, key=lambda x: -x.count())))
+                                       id="%i_%i_%i" % (i, c, v.count()), description=''),
+                   enumerate(sorted(variants, key=lambda x: -x.count())))
         if len(seqs) > 0:
             f = open(out_dir_f % "samples/%i.fas" % i, 'w+')
             SeqIO.write(seqs, f, 'fasta')
@@ -33,7 +34,7 @@ if __name__=='__main__':
     parser.add_argument("-d", dest='delay', type=int, default=2)
     parser.add_argument("-L", dest='liver_size', type=int, default=1000)
     parser.add_argument("-mr", dest="mutation_rate", type=float, default=1.5E-3)
-    parser.add_argument("-cdr", dest='cell_death_rate', type=float, default=0.025)
+    parser.add_argument("-cdr", dest='cell_death_rate', type=float, default=0.045)
     parser.add_argument("-bcr", dest="b_cell_rate", type=float, default=1E-4)
     parser.add_argument("-o", dest='out_dir', type=str, required=True)
     parser.add_argument("-i", dest='input', type=argparse.FileType('r'), default=sys.stdin)
@@ -57,7 +58,7 @@ if __name__=='__main__':
 
     mr = args.mutation_rate #0.005
 
-    cp = 0.005
+    cp = 0.02
     cdr = args.cell_death_rate    #0.25
     bcr = args.b_cell_rate    #0.05
     Variant.creact = True
@@ -102,9 +103,8 @@ if __name__=='__main__':
 
     print "Initial node ID: %i" % i
 
-    log = open(out_dir_f % "time.log", mode="w+")
-    log_format = "%i - %i\n"
-    log.write(log_format % (i, 0))
+    log = open(out_dir_f % "time.csv", mode="w+")
+    time = {i:0}
 
     for j in xrange(T):
         tI = []
@@ -130,14 +130,21 @@ if __name__=='__main__':
                 virion = Virion(var)
 
                 target.blood.infect(virion)
-                log.write(log_format % (ti, j))
+                time[ti] = j
                 tI.append(ti)
                 transmission.add_edge(i, ti)
                 break
 
         I.extend(tI)
 
+    ts = ",".join(map(lambda x: str(time[x]), sorted(time.keys())))
+    print ts
+    log.write(ts + '\n')
+
     nd.write_dot(transmission, out_dir_f % "transmission.dot")
+    nx.write_graphml(transmission, out_dir_f % "transmission.graphml")
+    nx.write_pajek(transmission, out_dir_f % "transmission.pajek")
+    nx.write_gexf(transmission, out_dir_f % "transmission.gefx")
     os.makedirs(out_dir_f % 'samples')
 
     print_samples(I, hosts)

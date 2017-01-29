@@ -4,11 +4,28 @@ from Bio import (SeqIO, SeqRecord, Seq)
 from Levenshtein import distance
 
 import itertools
+import networkx as nx
 import argparse
 import sys
 import os
 from quasim import *
 
+# LIST OF DEFAULT PARAMETERS INTRA
+T_SIMULATION_TIME=100
+D_IMMUNE_SYSTEM_DELAY=5
+L_LIVER_SIZE=5000
+CDR_INFECTED_CELL_DEATH_RATE=0.1
+CIR_PROBABILITY_TO_INFECT_LIVER_CELL=0.1
+BCR_B_CELL_RATE=5E-4
+DEFAULT_REGION_LENGTH=60
+
+###########
+MUTATION_RATE=1E-5
+###########
+
+
+# LIST OF DEFAULT PARAMETERS INTER
+EXP_FOR_SCALE_FREE_GRAPH=2.5
 
 def print_samples(I, hosts, j):
     for i in I:
@@ -27,6 +44,36 @@ def simulate_intrahost(ihost, initial):
     ihost.blood.infect(Virion(vv))
     ihost.blood.flow()
     ihost.blood.infect(ihost.liver.produce_virions(mr))
+
+def compute_scale_freeness(G):
+    assert isinstance(G, nx.Graph)
+    n = G.number_of_nodes()
+
+    sf = sum(G.degree(e[0])*G.degree(e[1]) for e in G.edges_iter())
+
+    return float(sf) / ((n-1)**2)
+
+def filter_dead_ancestries(G, vars):
+    assert isinstance(G, nx.Graph)
+
+    if len(G) < 10: return G
+
+    alive_vars = filter(lambda v: v.count() > 0, vars)
+
+    G_nodes = set()
+
+    for v in alive_vars:
+        if v in G_nodes: continue
+        ancestries = [v]
+        while len(ancestries) > 0:
+            vv = ancestries[0]
+
+            ancestries.remove(vv)
+            if vv in G_nodes: continue
+            ancestries.extend(G.predecessors(vv))
+            G_nodes.add(vv)
+
+    return G.subgraph(G_nodes)
 
 def get_diversity(variants):
     div = 0.0
@@ -58,15 +105,18 @@ def get_divergence(variants, initial):
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-T", dest='T', type=int, default=20)
-    parser.add_argument("-d", dest='delay', type=int, default=2)
-    parser.add_argument("-L", dest='liver_size', type=int, default=1000)
-    parser.add_argument("-mr", dest="mutation_rate", type=float, default=5.5E-3)
-    parser.add_argument("-cdr", dest='cell_death_rate', type=float, default=0.75)
-    parser.add_argument("-bcr", dest="b_cell_rate", type=float, default=8E-4)
+    parser.add_argument("-T", dest='T', type=int, default=T_SIMULATION_TIME)
+    parser.add_argument("-d", dest='delay', type=int, default=D_IMMUNE_SYSTEM_DELAY)
+    parser.add_argument("-L", dest='liver_size', type=int, default=L_LIVER_SIZE)
+    parser.add_argument("-mr", dest="mutation_rate", type=float, default=MUTATION_RATE)
+    parser.add_argument("-cdr", dest='cell_death_rate', type=float, default=CDR_INFECTED_CELL_DEATH_RATE)
+    parser.add_argument("-bcr", dest="b_cell_rate", type=float, default=BCR_B_CELL_RATE)
+    parser.add_argument("-min_ab", dest="min_ab_eff", type=float, default=None)
     parser.add_argument("-o", dest='out_dir', type=str, required=True)
     parser.add_argument("-i", dest='input', type=argparse.FileType('r'), default=sys.stdin)
     args = parser.parse_args()
+
+    cir = CIR_PROBABILITY_TO_INFECT_LIVER_CELL
 
     if os.path.isdir(args.out_dir):
         os.system('rm -r %s' % args.out_dir)
@@ -91,17 +141,16 @@ if __name__=='__main__':
     bcr = args.b_cell_rate    #0.05
     Variant.creact = True
     T = args.T
-    dT = 20 # step in cycles before printing output
 
-    fasta = SeqIO.parse(args.input, 'fasta')
+    fasta = list(SeqIO.parse(args.input, 'fasta'))
 
-    initial = fasta.next()
+    initial = random.choice(fasta)
 
     print initial
-    Virion.epitopes = Epitopes(len(initial.seq), 5)
+    Virion.epitopes = Epitopes(len(initial.seq), DEFAULT_REGION_LENGTH)
 
     S = [0]
-    hosts = { x: Host(liver_size, initial) for x in S}
+    hosts = {x: Host(liver_size, initial, args.min_ab_eff) for x in S}
     I = []
     i = random.choice(S)
     ihost = hosts[i]
@@ -114,7 +163,13 @@ if __name__=='__main__':
     print "Initial node ID: %i" % i
 
     log = open(out_dir_f % "stats.csv", mode="w+")
-    log.write("tick\tdiversity\tdivergence\t# of virions\n")
+    log.write("tick\t"
+              "diversity\t"
+              "divergence\t"
+              "# of virions\t"
+              "# of variants\t"
+              "scale freeness all\t"
+              "scale freeness alive\n")
 
     for j in xrange(T):
         tI = []
@@ -122,18 +177,30 @@ if __name__=='__main__':
             log.write("%i\t" % j)
             ihost = hosts[i]
             #########################
-            ihost.tick(j, mr, cdr, bcr, delay)
+            ihost.tick(j, mr, cdr, bcr, delay, cir)
             v_count = sum(i.count() for i in ihost.blood.variants)
+            variants = sum(1 if i.count() > 0 else 0 for i in ihost.blood.variants)
 
+            G = ihost.liver.gen_tree
 
             print "%i : %i" % (j, v_count)
             if v_count == 0:
                 print "Population died out"
                 sys.exit(-1)
-            log.write("%.3e\t" % get_diversity(ihost.blood.variants))
-            log.write("%.3e\t" % get_divergence(ihost.blood.variants, ihost.initial))
-            log.write("%i\n" % v_count)
-        if (j + 1) % dT == 0:
-            print_samples(I, hosts, j+1)
+            else:
+                log.write("%.3e\t" % get_diversity(ihost.blood.variants))
+                log.write("%.3e\t" % get_divergence(ihost.blood.variants, ihost.initial))
+                log.write("%i\t" % v_count)
+                log.write("%i\t" % variants)
+                # log.write("%.3e\t" % compute_scale_freeness(G))
+                # log.write("%.3e\t" % compute_scale_freeness(filter_dead_ancestries(G, ihost.blood.variants)))
+                log.write('\n')
+        # if (j + 1) % dT == 0:
+        print_samples(I, hosts, j+1)
 
         I.extend(tI)
+    nx.write_pajek(ihost.liver.gen_tree, out_dir_f % "gen_tree.net")
+    nx.write_edgelist(ihost.liver.gen_tree, out_dir_f % "gen_tree.edges")
+    nx.write_pajek(filter_dead_ancestries(ihost.liver.gen_tree, ihost.blood.variants), out_dir_f % "gen_tree_alive.net")
+
+

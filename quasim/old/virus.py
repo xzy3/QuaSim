@@ -12,11 +12,9 @@ from Levenshtein import distance
 
 nucls = 'ACTG'
 
-
 class Virion:
 
     epitopes = None
-    is_safe = False
 
     def __init__(self, variant):
         assert isinstance(variant, Variant)
@@ -27,7 +25,6 @@ class Virion:
 class Variant:
 
     creact = True
-    var_counter = 0
 
     # Generator map for nucleotides
     gen_map = {x: filter(lambda a: a != x, nucls) for x in nucls}
@@ -43,8 +40,6 @@ class Variant:
         self.host = host
         self.epitope_variants = map(self.__return_epitope_variant, self.host.epitopes)
         self.death_threshold = Virion.epitopes.size() / 2 + 1
-        self.id = Variant.var_counter
-        Variant.var_counter += 1
 
     def __return_epitope_variant(self, ep):
         if not Variant.creact: return EpitopeVariant(ep, self)
@@ -62,9 +57,6 @@ class Variant:
 
     def __hash__(self):
         return hash(self.seq)
-
-    def __str__(self):
-        return str(self.id)
 
     def is_targeted(self):
         c = sum(map(lambda x: x.is_targeted, self.epitope_variants))

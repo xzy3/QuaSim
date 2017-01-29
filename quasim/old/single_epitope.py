@@ -59,14 +59,16 @@ if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-T", dest='T', type=int, default=20)
-    parser.add_argument("-d", dest='delay', type=int, default=2)
+    parser.add_argument("-d", dest='delay', type=int, default=5)
     parser.add_argument("-L", dest='liver_size', type=int, default=1000)
-    parser.add_argument("-mr", dest="mutation_rate", type=float, default=5.5E-3)
-    parser.add_argument("-cdr", dest='cell_death_rate', type=float, default=0.75)
-    parser.add_argument("-bcr", dest="b_cell_rate", type=float, default=8E-4)
+    parser.add_argument("-mr", dest="mutation_rate", type=float, default=7.5E-6)
+    parser.add_argument("-cdr", dest='cell_death_rate', type=float, default=0.01)
+    parser.add_argument("-bcr", dest="b_cell_rate", type=float, default=2E-4)
     parser.add_argument("-o", dest='out_dir', type=str, required=True)
     parser.add_argument("-i", dest='input', type=argparse.FileType('r'), default=sys.stdin)
     args = parser.parse_args()
+
+    cir = 0.1
 
     if os.path.isdir(args.out_dir):
         os.system('rm -r %s' % args.out_dir)
@@ -98,7 +100,7 @@ if __name__=='__main__':
     initial = fasta.next()
 
     print initial
-    Virion.epitopes = Epitopes(len(initial.seq), 5)
+    Virion.epitopes = Epitopes(len(initial.seq), 60)
 
     S = [0]
     hosts = { x: Host(liver_size, initial) for x in S}
@@ -114,7 +116,7 @@ if __name__=='__main__':
     print "Initial node ID: %i" % i
 
     log = open(out_dir_f % "stats.csv", mode="w+")
-    log.write("tick\tdiversity\tdivergence\t# of virions\n")
+    log.write("tick\tdiversity\tdivergence\t# of virions\t# of variants\n")
 
     for j in xrange(T):
         tI = []
@@ -122,9 +124,9 @@ if __name__=='__main__':
             log.write("%i\t" % j)
             ihost = hosts[i]
             #########################
-            ihost.tick(j, mr, cdr, bcr, delay)
+            ihost.tick(mr, cdr, bcr, delay, cir)
             v_count = sum(i.count() for i in ihost.blood.variants)
-
+            variants = sum(1 if i.count() > 0 else 0 for i in ihost.blood.variants)
 
             print "%i : %i" % (j, v_count)
             if v_count == 0:
@@ -132,8 +134,9 @@ if __name__=='__main__':
                 sys.exit(-1)
             log.write("%.3e\t" % get_diversity(ihost.blood.variants))
             log.write("%.3e\t" % get_divergence(ihost.blood.variants, ihost.initial))
-            log.write("%i\n" % v_count)
-        if (j + 1) % dT == 0:
-            print_samples(I, hosts, j+1)
+            log.write("%i\t" % v_count)
+            log.write("%i\n" % variants)
+        # if (j + 1) % dT == 0:
+        print_samples(I, hosts, j+1)
 
         I.extend(tI)

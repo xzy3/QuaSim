@@ -9,35 +9,26 @@ Liver class describes liver cells and interaction with blood
 from quasim.virus import Virion
 from quasim.immune_system import AntiBody
 from collections import defaultdict
-import networkx as nx
 import random
 
-DEFAULT_ANTIBODY_EFFECTIVENESS=0.99
-AB_EFFECTIVENESS_MULTIPLIER=0.99
-MIN_AB_EFFICIENCY=0.9
 
 class Host:
 
-    def __init__(self, num_of_cells, initial=None, min_ab_eff=None):
-        global MIN_AB_EFFICIENCY
-        if min_ab_eff is not None: MIN_AB_EFFICIENCY = min_ab_eff
+    def __init__(self, num_of_cells, initial=None):
         self.liver = Liver()
-        self.liver.cells = [Cell(self.liver) for _ in xrange(num_of_cells)]
+        self.liver.cells = [Cell(self.liver) for i in xrange(num_of_cells)]
         self.epitope_variants = defaultdict(lambda: None)
         self.blood = Blood(self)
         self.initial = initial
         self.rnd = random.Random()
         self.epitopes = self.rnd.sample(Virion.epitopes.epitope_pos, Virion.epitopes.size())
 
-    def tick(self, i, mr, cdr, bcr, delay, cir):
+    def tick(self, mr=0.0, cdr=0.0, bcr=0.01, delay = 2, cir=0.1):
         self.blood.flow(bcr=bcr, delay=delay, cir=cir)
-        self.blood.infect(
-            self.liver.produce_virions(i, mr),
-            abr=DEFAULT_ANTIBODY_EFFECTIVENESS,
-            fabr=AB_EFFECTIVENESS_MULTIPLIER)
         for c in self.liver.cells:
             if random.random() < cdr:
                 c.uninfect()
+        self.blood.infect(self.liver.produce_virions(mr), abr=0.5 if True else 0.99)
 
 class Blood:
 
@@ -52,7 +43,9 @@ class Blood:
         self.host = host
         self.antibodies = defaultdict(lambda: False)
 
-    def infect(self, virions, abr=DEFAULT_ANTIBODY_EFFECTIVENESS, fabr=AB_EFFECTIVENESS_MULTIPLIER):
+
+
+    def infect(self, virions, abr=0.99):
         if isinstance(virions, list):
             self.variants = self.variants.union(x.variant for x in virions)
         elif isinstance(virions, Virion):
@@ -61,16 +54,16 @@ class Blood:
         for v in self.variants:
             if v.is_targeted():
                 vv = v.epitope_variants[0]
-                power = sum(x.is_targeted for x in vv.neighbors)
-                fabr **= power
-                abr *= fabr
-                abr = max(abr, MIN_AB_EFFICIENCY)
+                if any(x.is_targeted for x in vv.neighbors):
+                    abr = 0.9
+                else:
+                    abr = 0.99
                 v.virions[:] = [x for x in v.virions if random.random() > abr]
 
     def virions(self):
         return [v for var in self.variants for v in var.virions]
 
-    def flow(self, bcr, delay, cir):
+    def flow(self, bcr=0.01, delay=1, cir=0.1):
         tvs = []
         for v in self.virions():
             if self.host.rnd.random() < bcr:
@@ -102,14 +95,11 @@ class Liver:
         assert isinstance(cells, list)
         self.cells = cells
         self.infected_cells = []
-        self.gen_tree = nx.DiGraph()
 
-    def produce_virions(self, j, mr):
+    def produce_virions(self, mr):
         new_virions = []
         for i in self.infected_cells:
             v = i.variant.replicate(mr)
-            if v != i.variant and v not in self.gen_tree.nodes():
-                self.gen_tree.add_edge(i.variant, v, time=j)
             new_virions.append(Virion(v))
         return new_virions
 
