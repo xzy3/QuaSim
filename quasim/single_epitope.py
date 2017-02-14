@@ -21,6 +21,7 @@ DEFAULT_REGION_LENGTH=60
 
 ###########
 MUTATION_RATE=1E-5
+MUTATE_INITIAL_SEQUENCE=0
 ###########
 
 
@@ -38,6 +39,21 @@ def print_samples(I, hosts, j):
         if len(seqs) > 0:
             f = open(out_dir_f % "%i_t%i.fas" % (i, j), 'w+')
             SeqIO.write(seqs, f, 'fasta')
+
+def mutate_initial(initial, n_mut=0):
+    if n_mut == 0: return initial
+
+    l = len(initial.seq)
+
+    m_pos = random.sample(range(l), n_mut)
+
+    mseq = list(str(initial.seq))
+
+    for m in m_pos:
+        mseq[m] = random.choice(Variant.gen_map[mseq[m]])
+
+    assert sum(x != y for (x, y) in zip(mseq, initial.seq)) == n_mut
+    initial.seq = Seq.Seq(''.join(mseq), Seq.Alphabet.SingleLetterAlphabet())
 
 def simulate_intrahost(ihost, initial):
     vv = Variant(str(initial))
@@ -76,27 +92,23 @@ def filter_dead_ancestries(G, vars):
     return G.subgraph(G_nodes)
 
 def get_diversity(variants):
-    div = 0.0
     variants = filter(lambda x: x.count() > 0, variants)
     N = sum(v.count() for v in variants)
     L = max(len(v.seq) for v in variants)
     if len(variants) <= 1:
         return 0.0
-    for (s, t) in itertools.combinations(variants, 2):
-        div += s.count() * t.count() * distance(str(s.seq), str(t.seq))
-    div = 2 * div / ( N * N * L )
+    div = sum(s.count() * t.count() * distance(str(s.seq), str(t.seq)) for (s, t) in itertools.combinations(variants, 2))
+    div = 2.0 * div / ( N * N * L )
     return div
 
 def get_divergence(variants, initial):
-    div = 0.0
     variants = filter(lambda x: x.count() > 0, variants)
     N = sum(v.count() for v in variants)
     L = max(len(v.seq) for v in variants)
     if len(variants) <= 1:
         return 0.0
-    for s in variants:
-        div += s.count() * distance(str(s.seq), str(initial.seq))
-    div = div / (N * L)
+    div = sum(s.count() * distance(str(s.seq), str(initial.seq)) for s in variants)
+    div = float(div) / (N * L)
     return div
 
 ###################
@@ -112,6 +124,7 @@ if __name__=='__main__':
     parser.add_argument("-cdr", dest='cell_death_rate', type=float, default=CDR_INFECTED_CELL_DEATH_RATE)
     parser.add_argument("-bcr", dest="b_cell_rate", type=float, default=BCR_B_CELL_RATE)
     parser.add_argument("-min_ab", dest="min_ab_eff", type=float, default=None)
+    parser.add_argument("-mut", dest="mutate_initial", type=int, default=MUTATE_INITIAL_SEQUENCE)
     parser.add_argument("-o", dest='out_dir', type=str, required=True)
     parser.add_argument("-i", dest='input', type=argparse.FileType('r'), default=sys.stdin)
     args = parser.parse_args()
@@ -146,7 +159,7 @@ if __name__=='__main__':
 
     initial = random.choice(fasta)
 
-    print initial
+    mutate_initial(initial, args.mutate_initial)
     Virion.epitopes = Epitopes(len(initial.seq), DEFAULT_REGION_LENGTH)
 
     S = [0]
