@@ -113,6 +113,10 @@ class Liver:
             new_virions.append(Virion(v))
         return new_virions
 
+    def infected_portion(self):
+        return float(len(self.infected_cells)) / len(self.cells) * 100
+
+
 class Cell:
 
     def __init__(self, liver):

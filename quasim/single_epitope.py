@@ -196,7 +196,7 @@ if __name__=='__main__':
 
             G = ihost.liver.gen_tree
 
-            print "%i : %i" % (j, v_count)
+            print "%i : %i : %i : %.2f%%" % (j, v_count, variants, ihost.liver.infected_portion())
             if v_count == 0:
                 print "Population died out"
                 sys.exit(-1)

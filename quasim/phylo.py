@@ -9,6 +9,8 @@ import sys
 DISTANCE_TYPE='identity'
 TREE_CONSTRUCTION_ALGORITHM='nj'
 FASTA='fasta'
+FASTA_EXTENSIONS=['.fasta', '.fas', '.fa']
+NEWICK_EXTENSIONS=['.nwk', '.newick']
 
 def build_phylogenetic_tree(seqs):
     calculator = DistanceCalculator(DISTANCE_TYPE)
@@ -21,10 +23,20 @@ def build_phylogenetic_tree(seqs):
 
     return tree
 
-def read_fasta_and_return_tree(path):
-    seqs = AlignIO.read(path, FASTA)
-    if len(seqs) <= 2: return None
-    tree = build_phylogenetic_tree(seqs)
+def read_fasta_or_newick_and_return_tree(path, nwk_path = None):
+    if any(path.name.endswith(x) for x in FASTA_EXTENSIONS):
+        seqs = AlignIO.read(path, FASTA)
+        if len(seqs) <= 2: return None
+        tree = build_phylogenetic_tree(seqs)
+        if nwk_path is not None and tree is not None:
+            NewickIO.write([tree], nwk_path)
+    elif any(path.name.endswith(x) for x in NEWICK_EXTENSIONS):
+        tree = NewickIO.parse(path).next()
+
+    # Root the tree if necessary
+    if not tree.rooted:
+        tree.root_at_midpoint()
+
     return tree
 
 
@@ -34,9 +46,32 @@ def get_shape_length(tree):
 
 def get_shape_hop_length(tree):
     clades = tree.find_clades() # all clades
-    # clades = tree.get_terminals() # only terminals
 
     return sum(len(tree.get_path(clade)) for clade in clades)
+
+def get_sackin_index(tree):
+    clades = tree.get_terminals()  # only terminals
+    isn = sum(len(tree.get_path(clade)) for clade in clades)
+    # n = tree.count_terminals()
+    # exp_isn = 2 * n * sum(x ** -1 for x in range(2, n+1)) # E(isn)=2n sum_{j=2..n} {1/j}
+    return isn
+
+def count_cherries(tree):
+    clades = tree.find_clades()
+
+    return sum(1 if sum(y.is_terminal() for y in x) >= 2 else 0 for x in clades)
+
+def get_colless_index(tree):
+    clades = tree.find_clades()
+
+    def size(clade):
+        if clade.is_terminal():
+            return 1
+        return sum(size(c) for c in clade)
+
+    return sum(abs(size(clade[0]) - size(clade[1])) if len(clade) == 2 else 0 for clade in clades)
+
+################################################################################################
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -45,9 +80,7 @@ if __name__=='__main__':
     parser.add_argument("-o", dest='output', type=argparse.FileType('w+'), default=sys.stdout)
     args = parser.parse_args()
 
-    tree = read_fasta_and_return_tree(args.input)
-    if args.out_tree is not None and tree is not None:
-        NewickIO.write([tree], args.out_tree)
+    tree = read_fasta_or_newick_and_return_tree(args.input, args.out_tree)
 
     if tree is None:
         # args.output.write("%.4e\t%.4e\t%i\n" % (1, 1, 2))
@@ -57,12 +90,15 @@ if __name__=='__main__':
     total_len = tree.total_branch_length()
 
     hop_len = get_shape_hop_length(tree)
+    sackin = get_sackin_index(tree)
     n = tree.count_terminals()
 
     hop_r = hop_len * 1.0 / (n * (n-1)) # all clades
-    # hop_r = hop_len * 2.0 / (n * (n-1)) # only terminals
+    cherries =  count_cherries(tree)
+    colless = get_colless_index(tree)
 
 
-    args.output.write("%.4e\t%.4e\t%i\n" % (shape_len/total_len, hop_r, tree.count_terminals()))
+    args.output.write("%.4e\t%.4e\t%.4e\t%d\t%d\t%i\n" %
+                      (shape_len/total_len, hop_r, sackin, cherries, colless, tree.count_terminals()))
     # print "Shape len: %.4e and total len: %.4e ratio: %.4e" % (shape_len, total_len, shape_len/total_len)
     # print "Hop length: %.4e ratio: %.4e" % (hop_len, hop_len * 1.0 / (n * (n-1)))

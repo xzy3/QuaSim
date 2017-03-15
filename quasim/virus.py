@@ -9,6 +9,7 @@ import random
 from Levenshtein import distance
 
 # from quasim.host import Host
+from quasim.disbalance import Profile
 
 nucls = 'ACTG'
 
@@ -26,11 +27,12 @@ class Virion:
 
 class Variant:
 
-    creact = True
+    creact = False
     var_counter = 0
 
     # Generator map for nucleotides
     gen_map = {x: filter(lambda a: a != x, nucls) for x in nucls}
+    profile = Profile()
 
     def __init__(self, seq, host, virions=None):
         if virions is None:
@@ -76,10 +78,13 @@ class Variant:
     def replicate(self, mr):
         m_seq = ""
         flag = False
-        for n in self.seq:
+        for pos, n in enumerate(self.seq):
             rnd = self.host.rnd.random()
             if rnd < mr:
-                m_seq += self.host.rnd.choice(self.gen_map[n])
+                mut_nucl = Variant.profile.mutate_nucl_pos(n, pos)
+                if mut_nucl is None:
+                    mut_nucl = self.host.rnd.choice(self.gen_map[n])
+                m_seq +=  mut_nucl
                 flag = True
             else:
                 m_seq += n
