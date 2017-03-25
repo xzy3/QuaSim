@@ -1,3 +1,12 @@
+#! /usr/bin/env python
+
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 1/15/2017
+#
+######################
+
 import argparse
 import networkx as nx
 import sys

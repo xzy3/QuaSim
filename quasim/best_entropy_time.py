@@ -1,3 +1,12 @@
+#! /usr/bin/env python
+
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 2/15/2017
+#
+######################
+
 import argparse
 import sys
 from operator import itemgetter
@@ -10,7 +19,7 @@ from Bio import (AlignIO, SeqRecord, Seq, SeqIO)
 
 from entropy import Profile
 
-DEFAULT_K_RANGE=range(1,15)
+DEFAULT_K_RANGE=range(1,20)
 DEFAULT_MAX_T=1000
 
 def mean(values):

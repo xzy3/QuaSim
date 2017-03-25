@@ -1,3 +1,12 @@
+#! /usr/bin/env python
+
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 1/11/2017
+#
+######################
+
 from Bio import (SeqIO, SeqRecord, Seq)
 
 import argparse

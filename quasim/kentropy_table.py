@@ -1,3 +1,12 @@
+#! /usr/bin/env python
+
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 3/17/2017
+#
+######################
+
 import argparse
 import sys
 from operator import itemgetter

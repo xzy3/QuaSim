@@ -1,5 +1,12 @@
 #! /usr/bin/env python
 
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 9/15/2015
+#
+######################
+
 from Bio import (SeqIO, SeqRecord, Seq)
 from Levenshtein import distance
 

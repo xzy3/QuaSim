@@ -4,11 +4,20 @@ import argparse
 import sys
 import math
 import re
+# ! /usr/bin/env python
+
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 3/15/2017
+#
+######################
+
 import numpy
 from collections import Counter
 
-PATTERN="[0-9]*$"
-FASTA='fasta'
+from quasim import FASTA, PATTERN, DEFAULT_MIN_SIZE
+
 
 def get_count(fas, patt):
     if patt == "": return 1.0
@@ -20,6 +29,7 @@ def get_count(fas, patt):
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", dest='input', type=argparse.FileType('r'), required=True)
+    parser.add_argument("-n", dest='n', type=int, default=DEFAULT_MIN_SIZE)
     parser.add_argument("-o", dest="output", type=argparse.FileType('w+'), default=sys.stdout)
     args = parser.parse_args()
 
@@ -35,4 +45,7 @@ if __name__=='__main__':
     fasta = [x for x in fasta if len(x) == l and get_count(x, PATTERN) > 2]
     sys.stderr.write("After filtering: %i\n" % len(fasta))
 
-    SeqIO.write(fasta, args.output, FASTA)
+    if len(fasta) < args.n:
+        sys.stderr.write("Sample is too small! Skipping...\n")
+    else:
+        SeqIO.write(fasta, args.output, FASTA)

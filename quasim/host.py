@@ -1,3 +1,12 @@
+#! /usr/bin/env python
+
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 5/15/2016
+#
+######################
+
 """
 Code related to host (human) in simulation
 Blood class describes blood of host, it can be infected and

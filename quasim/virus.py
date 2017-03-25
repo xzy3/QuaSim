@@ -1,18 +1,26 @@
+#! /usr/bin/env python
+
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 5/15/2016
+#
+######################
+
 """
 Code related to viral infection Hepatitis C virus,
 Variant class is for viral variant (sequence specific)
 Virion class to represent viral agent (molecule) in the blood
-
 """
 
 import random
 from Levenshtein import distance
 
 # from quasim.host import Host
+# from quasim import nucls
 from quasim.disbalance import Profile
 
 nucls = 'ACTG'
-
 
 class Virion:
 

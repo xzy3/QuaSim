@@ -1,4 +1,11 @@
+#! /usr/bin/env python
 
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 1/18/2017
+#
+######################
 import argparse
 import re
 from Bio import SeqIO

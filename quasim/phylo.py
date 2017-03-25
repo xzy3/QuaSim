@@ -1,5 +1,14 @@
 #! /usr/bin/env python
 
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 1/15/2017
+#
+######################
+
+#! /usr/bin/env python
+
 from Bio.Phylo.TreeConstruction import (DistanceTreeConstructor, DistanceCalculator)
 from Bio import (AlignIO, Phylo)
 from Bio.Phylo import NewickIO

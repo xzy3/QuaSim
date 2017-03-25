@@ -1,5 +1,12 @@
 #! /usr/bin/env python
 
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 3/17/2016
+#
+######################
+
 from Bio import (SeqIO, SeqRecord, Seq)
 
 import argparse
@@ -20,9 +27,6 @@ DEFAULT_REGION_LENGTH=60
 MUTATION_RATE=1E-4
 ###########
 
-
-# LIST OF DEFAULT PARAMETERS INTER
-EXP_FOR_SCALE_FREE_GRAPH=2.5
 
 def print_sample(ihost, j, count_threshold=0):
     i = 0
@@ -78,7 +82,6 @@ if __name__=='__main__':
     num = 1
     liver_size = args.liver_size
     delay = args.delay
-    exp = EXP_FOR_SCALE_FREE_GRAPH
 
     mr = args.mutation_rate
 
@@ -92,7 +95,7 @@ if __name__=='__main__':
     fasta = list(SeqIO.parse(args.input, 'fasta'))
 
     Variant.profile.load_from_fasta(fasta)
-    Variant.profile.build_mut_map()
+    Variant.profile.build_mutations_map()
 
     initial = random.choice(fasta)
 
@@ -125,7 +128,6 @@ if __name__=='__main__':
         else:
             log.write("%i : %i : %i : %.2f%%" % (j, v_count, variants, ihost.liver.infected_portion()))
             log.write('\n')
-    # if (j + 1) % dT == 0:
         print_sample(ihost, j+1)
 
 

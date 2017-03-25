@@ -1,4 +1,12 @@
 #! /usr/bin/env python
+
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 3/15/2017
+#
+######################
+
 import networkx as nx
 import networkx.drawing.nx_pydot as nd
 from networkx.utils import (powerlaw_sequence, create_degree_sequence)

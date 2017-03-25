@@ -1,3 +1,12 @@
+#! /usr/bin/env python
+
+######################
+#
+#  Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+#  Created: 3/15/2016
+#
+######################
+
 """
 Code related to immune system functionality
 AntiBody class representing B-cell either targeted to specific

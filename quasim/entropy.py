@@ -85,6 +85,14 @@ class Profile:
         # Normalize profile
         self.normalize()
 
+    def save_to_fasta(self, fasta):
+
+        s = [(seq_freq[0], i) for i, seq_freq in enumerate(self.seqs)]
+        seqs = [SeqRecord.SeqRecord(Seq.Seq(str_seq, alphabet=Seq.Alphabet.SingleLetterAlphabet()),
+                                    id="%i_%.0f" % (i, 1.0), description='')
+                    for str_seq, i in s]
+        SeqIO.write(seqs, fasta, "fasta")
+
     def build_mutations_map(self):
         self.mut_map = [{x: [y for y in e if y != x] for x in e} for e in self.profile]
 
@@ -130,4 +138,4 @@ if __name__=='__main__':
     #print '\n'.join(map(str, profile.get_positional_entropy()))
     print '\n'.join('\t'.join(map(str, e.values())) for e in profile.profile)
     profile.build_mutations_map()
-    print profile.mut_map
+    # print profile.mut_map
