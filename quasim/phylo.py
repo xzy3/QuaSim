@@ -12,6 +12,7 @@
 from Bio.Phylo.TreeConstruction import (DistanceTreeConstructor, DistanceCalculator)
 from Bio import (AlignIO, Phylo)
 from Bio.Phylo import NewickIO
+from quasim.disbalance import get_count
 import argparse
 import sys
 
@@ -20,6 +21,8 @@ TREE_CONSTRUCTION_ALGORITHM='nj'
 FASTA='fasta'
 FASTA_EXTENSIONS=['.fasta', '.fas', '.fa']
 NEWICK_EXTENSIONS=['.nwk', '.newick']
+MIN_COUNT=1
+NUM_OF_VIRIONS=0
 
 def build_phylogenetic_tree(seqs):
     calculator = DistanceCalculator(DISTANCE_TYPE)
@@ -32,9 +35,13 @@ def build_phylogenetic_tree(seqs):
 
     return tree
 
-def read_fasta_or_newick_and_return_tree(path, nwk_path = None):
+def read_fasta_or_newick_and_return_tree(path, nwk_path = None, patt = None):
+    global NUM_OF_VIRIONS
     if any(path.name.endswith(x) for x in FASTA_EXTENSIONS):
         seqs = AlignIO.read(path, FASTA)
+        seqs._records = [x for x in seqs if get_count(x, patt) > MIN_COUNT]
+        NUM_OF_VIRIONS = int(sum(get_count(x, patt) for x in seqs))
+
         if len(seqs) <= 2: return None
         tree = build_phylogenetic_tree(seqs)
         if nwk_path is not None and tree is not None:
@@ -86,10 +93,12 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", dest='input', type=argparse.FileType('r'), required=True)
     parser.add_argument("-t", dest='out_tree', type=argparse.FileType('w+'), default=None)
+    parser.add_argument("-p", dest='patt', type=str, default="[0-9]*$")
     parser.add_argument("-o", dest='output', type=argparse.FileType('w+'), default=sys.stdout)
     args = parser.parse_args()
 
-    tree = read_fasta_or_newick_and_return_tree(args.input, args.out_tree)
+    patt = args.patt
+    tree = read_fasta_or_newick_and_return_tree(args.input, args.out_tree, patt)
 
     if tree is None:
         # args.output.write("%.4e\t%.4e\t%i\n" % (1, 1, 2))
@@ -107,7 +116,7 @@ if __name__=='__main__':
     colless = get_colless_index(tree)
 
 
-    args.output.write("%.4e\t%.4e\t%.4e\t%d\t%d\t%i\n" %
-                      (shape_len/total_len, hop_r, sackin, cherries, colless, tree.count_terminals()))
+    args.output.write("%.4e\t%.4e\t%.4e\t%d\t%d\t%i\t%i\n" %
+                      (shape_len/total_len, hop_r, sackin, cherries, colless, tree.count_terminals(), NUM_OF_VIRIONS))
     # print "Shape len: %.4e and total len: %.4e ratio: %.4e" % (shape_len, total_len, shape_len/total_len)
     # print "Hop length: %.4e ratio: %.4e" % (hop_len, hop_len * 1.0 / (n * (n-1)))

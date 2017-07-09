@@ -187,9 +187,8 @@ if __name__=='__main__':
               "diversity\t"
               "divergence\t"
               "# of virions\t"
-              "# of variants\t"
-              "scale freeness all\t"
-              "scale freeness alive\n")
+              "# of variants\n"
+              )
 
     for j in xrange(T):
         tI = []

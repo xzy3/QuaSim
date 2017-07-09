@@ -7,14 +7,10 @@
 #
 ######################
 
-from Bio import (SeqIO, SeqRecord, Seq)
-
 import argparse
-import sys
-import math
 import re
-import numpy
-from collections import defaultdict
+
+from Bio import (SeqIO)
 
 from quasim.entropy import Profile
 

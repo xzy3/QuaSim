@@ -17,6 +17,7 @@ import random
 from Bio.Seq import Seq
 from Bio import (AlignIO, SeqRecord, Seq, SeqIO)
 
+import quasim
 from entropy import Profile
 
 DEFAULT_K_RANGE=range(1,20)
@@ -36,12 +37,12 @@ def get_k_entropies(fasta, ks):
     for k in ks:
         profiles[k - 1].load_from_fasta(fasta, k, patt)
     entropies = [profiles[k - 1].get_positional_entropy() for k in ks]
-    print "\t".join("%.3f" % (mean(ents)) for ents in entropies)
+    return "\t".join("%.3f" % (mean(ents)) for ents in entropies)
     # , variance(ents)
 
-def find_best_t(input, t, reads, patt):
+def find_best_t(input, t, reads, k=1, patt=""):
     L = len(reads)
-    reads_pr = Profile()
+    reads_pr = Profile(k)
     reads_pr.load_from_fasta(reads)
     real_mean = mean(reads_pr.get_positional_entropy())
     best_T=-1
@@ -52,15 +53,16 @@ def find_best_t(input, t, reads, patt):
         if len(sim_seqs) > L:
             sub_seqs = random.sample(sim_seqs, L)
         else:
-            sub_seqs = sim_seqs
-        pr = Profile()
+            continue
+        pr = Profile(k)
         pr.load_from_fasta(sub_seqs)
         sim_mean = mean(pr.get_positional_entropy())
         if abs(sim_mean - real_mean) < diff:
             diff = abs(sim_mean - real_mean)
             best_T = i
             best_seqs = sim_seqs
-
+    if best_T == -1:
+        return t, sim_seqs
     return best_T, best_seqs
 
 
@@ -71,7 +73,7 @@ if __name__=='__main__':
     parser.add_argument("-t", dest='t', type=int, default=DEFAULT_MAX_T)
     parser.add_argument("-r", dest='reads', type=argparse.FileType('r'), required=True)
     parser.add_argument("-k", dest="k", nargs='+', type=int, default=DEFAULT_K_RANGE)
-    parser.add_argument("-p", dest="pattern", type=str, default="")
+    parser.add_argument("-p", dest="pattern", type=str, default=quasim.PATTERN)
     parser.add_argument("-o", dest='output', type=argparse.FileType('w+'), default=sys.stdout)
     args = parser.parse_args()
 
@@ -79,20 +81,29 @@ if __name__=='__main__':
     ks = args.k
     patt = args.pattern
 
-    T, sim_reads = find_best_t(args.input, args.t, reads, patt)
+    T, sim_reads = find_best_t(args.input, args.t, reads, k=2, patt=patt)
 
-    print T
+    print "Best Time:\t%i" % T
 
     fasta = sim_reads
 
-    get_k_entropies(reads, ks)
+    #### REAL
+    print "NGS     \t%s" % get_k_entropies(reads, ks)
 
-    get_k_entropies(fasta, ks)
+    p = Profile()
+    p.load_from_fasta(reads)
+    p.randomize_seqs()
+    random_fasta = [s.seq for s in p.seqs]
+    print "Rand NGS\t%s" % get_k_entropies(random_fasta, ks)
 
-    def get_shuffled_sequence(reads, i):
-        l = len(reads[i].seq)
-        seqs_array = range(len(reads))
-        str_seq = "".join(reads[random.choice(seqs_array)].seq[i] for i in range(l))
-        return SeqRecord.SeqRecord(Seq.Seq(str_seq, alphabet=Seq.Alphabet.SingleLetterAlphabet()), id=reads[i].id)
-    random_fasta = [get_shuffled_sequence(reads, i) for i in range(len(reads))]
-    get_k_entropies(random_fasta, ks)
+    #### Simulated
+    print "Sim     \t%s" % get_k_entropies(fasta, ks)
+
+    p = Profile()
+    p.load_from_fasta(sim_reads)
+    p.randomize_seqs()
+    random_sim = [s.seq for s in p.seqs]
+    print "Rand Sim\t%s" % get_k_entropies(random_sim, ks)
+
+
+

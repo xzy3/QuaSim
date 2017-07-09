@@ -7,7 +7,19 @@ import sys
 import math
 import re
 from collections import defaultdict
+import numpy as np
 
+PATTERN=""
+
+
+class Variant:
+
+    def __init__(self, seq, patt = PATTERN):
+        assert isinstance(seq, SeqRecord.SeqRecord)
+
+        self.seq = seq
+        self.freq = get_count(seq, patt)
+        self.id = seq.id
 
 class Profile:
 
@@ -65,7 +77,7 @@ class Profile:
         self.size = size
         return m, sigma
 
-    def load_from_fasta(self, fasta, k = 1, patt = ""):
+    def load_from_fasta(self, fasta, k = 1, patt = PATTERN):
         L = -1
 
         for f in fasta:
@@ -78,23 +90,29 @@ class Profile:
             if L != l:
                 sys.stderr.write("Lengths are inconsistent %i and %i\n" % (L, l))
                 continue
-            freq = get_count(f, patt)
-            self.seqs.append((str(f.seq), freq))
-            self.feed_sequence(str(f.seq), freq)
+            v = Variant(f, patt)
+            self.seqs.append(v)
+            self.feed_sequence(str(f.seq), v.freq)
 
         # Normalize profile
         self.normalize()
 
     def save_to_fasta(self, fasta):
 
-        s = [(seq_freq[0], i) for i, seq_freq in enumerate(self.seqs)]
-        seqs = [SeqRecord.SeqRecord(Seq.Seq(str_seq, alphabet=Seq.Alphabet.SingleLetterAlphabet()),
-                                    id="%i_%.0f" % (i, 1.0), description='')
-                    for str_seq, i in s]
-        SeqIO.write(seqs, fasta, "fasta")
+        SeqIO.write([s.seq for s in self.seqs], fasta, "fasta")
+
+    def randomize_seqs(self):
+        str_seqs = [str(s.seq.seq) for s in self.seqs]
+        str_seqs = Profile.__randomize_seqs(str_seqs)
+
+        for i in range(len(self.seqs)):
+            self.seqs[i].seq = SeqRecord.SeqRecord(
+                                    Seq.Seq(str_seqs[i], alphabet=Seq.Alphabet.SingleLetterAlphabet()),
+                                    id=self.seqs[i].id, description='')
 
     def build_mutations_map(self):
-        self.mut_map = [{x: [y for y in e if y != x] for x in e} for e in self.profile]
+        if self.k == 1:
+            self.mut_map = [{x: [y for y in e if y != x] for x in e} for e in self.profile]
 
     def mutate_nucl_pos(self, nucl, pos):
         """
@@ -108,6 +126,21 @@ class Profile:
         if 0 <= pos < len(self.mut_map) and nucl in self.mut_map[pos]:
             return random.choice(self.mut_map[pos][nucl])
         return None
+
+    @staticmethod
+    def __randomize_seqs(seqs):
+        if len(seqs) == 0:
+            return None
+
+        L = len(seqs[0])
+        N = range(len(seqs))
+        rnd_seqs = [list(s) for s in seqs]
+        rnd_indices = [np.random.permutation(N) for _ in range(L)]
+
+        for i in N:
+            rnd_seqs[i] = [seqs[rnd_indices[x][i]][x] for x in range(L)]
+
+        return [''.join(x) for x in rnd_seqs]
 
     @staticmethod
     def entropy_term(p):
@@ -124,7 +157,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", dest='input', type=argparse.FileType('r'), required=True)
     parser.add_argument("-k", dest="k", type=int, default=1)
-    parser.add_argument("-p", dest="pattern", type=str, default="")
+    parser.add_argument("-p", dest="pattern", type=str, default=PATTERN)
     args = parser.parse_args()
 
     fasta = SeqIO.parse(args.input, 'fasta')

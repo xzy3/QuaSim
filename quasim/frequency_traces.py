@@ -26,7 +26,7 @@ if __name__=='__main__':
 
     for f in glob.glob("%s/*.fas" % args.input_dir):
         fasta = list(SeqIO.parse(f, 'fasta'))
-        m = re.search('t[0-9]*', f)
+        m = re.search('t[0-9]+', f)
         index = int(m.group(0)[1:])
         dd = defaultdict(lambda: .0)
         for seq in fasta:

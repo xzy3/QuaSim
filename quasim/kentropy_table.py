@@ -8,14 +8,11 @@
 ######################
 
 import argparse
-import sys
-from operator import itemgetter
-
 import collections
+import sys
+
 import numpy as np
-import random
-from Bio.Seq import Seq
-from Bio import (AlignIO, SeqRecord, Seq, SeqIO)
+from Bio import (SeqIO)
 
 from entropy import Profile
 
@@ -35,8 +32,10 @@ def get_k_entropies(fasta, ks):
     for k in ks:
         profiles[k - 1].load_from_fasta(fasta, k, patt)
     entropies = [profiles[k - 1].get_positional_entropy() for k in ks]
-    print "\t".join("%.3f(%.3f)" % (mean(ents), variance(ents)) for ents in entropies)
+    return np.array([mean(ents) for ents in entropies]) # [variance(ents) for ents in entropies]
 
+def join_tab_array(array):
+    return "\t".join("%.3f" % a for a in array)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -50,12 +49,12 @@ if __name__=='__main__':
 
     ks = args.k
     patt = args.pattern
-    get_k_entropies(fasta, ks)
+    actual =  get_k_entropies(fasta, ks)
 
-    def get_shuffled_sequence(fasta, i):
-        l = len(fasta[i].seq)
-        seqs_array = range(len(fasta))
-        str_seq = "".join(fasta[random.choice(seqs_array)].seq[i] for i in range(l))
-        return SeqRecord.SeqRecord(Seq.Seq(str_seq, alphabet=Seq.Alphabet.SingleLetterAlphabet()), id=fasta[i].id)
-    random_fasta = [get_shuffled_sequence(fasta, i) for i in range(len(fasta))]
-    get_k_entropies(random_fasta, ks)
+    p = Profile()
+    p.load_from_fasta(fasta)
+    p.randomize_seqs()
+    random_fasta = [s.seq for s in p.seqs]
+    randomized = get_k_entropies(random_fasta, ks)
+
+    print "Ratio\t%s" % join_tab_array(actual/randomized)

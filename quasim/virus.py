@@ -19,6 +19,7 @@ from Levenshtein import distance
 # from quasim.host import Host
 # from quasim import nucls
 from quasim.disbalance import Profile
+from quasim.epistasis import EpiSeq
 
 nucls = 'ACTG'
 
@@ -41,12 +42,14 @@ class Variant:
     # Generator map for nucleotides
     gen_map = {x: filter(lambda a: a != x, nucls) for x in nucls}
     profile = Profile()
+    epistasis = None
 
     def __init__(self, seq, host, virions=None):
         if virions is None:
             virions = []
         assert isinstance(seq, str)
         self.seq = seq
+        self.epi_seq = None if Variant.epistasis is None else EpiSeq(Variant.epistasis, str(seq))
         assert isinstance(virions, list)
         self.virions = virions
         # assert isinstance(host, Host)
@@ -84,6 +87,23 @@ class Variant:
         return len(self.virions)
 
     def replicate(self, mr):
+        """
+        Replicate a virion of this variant with mutation rate
+        :param mr:
+        :return:
+        """
+        if self.epi_seq is not None:
+            for pos, n in enumerate(self.seq):
+                rnd = self.host.rnd.random()
+                if rnd < mr:
+                    self.epi_seq.mutate_position(pos)
+            if str(self.epi_seq) != str(self.seq):
+                n_var = next((v for v in self.host.variants if v.seq == str(self.epi_seq)),
+                             Variant(str(self.epi_seq), self.host))
+                self.epi_seq = EpiSeq(Variant.epistasis, self.seq)
+                return n_var
+            else:
+                return self
         m_seq = ""
         flag = False
         for pos, n in enumerate(self.seq):
@@ -134,7 +154,7 @@ class EpitopeVariant:
         self.variant = variant
         self.seq = "".join(variant.seq[i] for i in epitope_pos.pos)
         self.is_targeted = False
-        self.neighbors = filter(lambda x: x.distance(self) == 1, epitope_pos.epitope_variants)
+        self.neighbors = [x for x in epitope_pos.epitope_variants if x.distance(self) == 1]
         for x in self.neighbors:
             x.neighbors.append(self)
 

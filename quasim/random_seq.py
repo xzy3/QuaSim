@@ -8,27 +8,9 @@
 ######################
 import argparse
 import sys
-import numpy as np
 
 from Bio import SeqIO
 from quasim import Profile
-
-
-def randomize_seqs(seqs):
-    ll = set(len(s) for s in seqs)
-    if len(ll) != 1:
-        sys.stderr.write("Lengths in fasta file are inconsistent, make sure input fasta is aligned\n")
-        sys.exit(-1)
-
-    L = ll.pop()
-    N = range(len(seqs))
-    rnd_seqs = [list(s) for s in seqs]
-    rnd_indices = [np.random.permutation(N) for _ in range(L)]
-
-    for i in N:
-        rnd_seqs[i] = [seqs[rnd_indices[x][i]][x] for x in range(L)]
-
-    return [''.join(x) for x in rnd_seqs]
 
 
 if __name__=='__main__':
@@ -52,9 +34,6 @@ if __name__=='__main__':
     profile = Profile()
     profile.load_from_fasta(fasta)
 
-    s = randomize_seqs([s[0] for s in profile.seqs])
-
-    for i in range(len(s)):
-        profile.seqs[i] = (s[i], profile.seqs[i][1])
+    s = profile.randomize_seqs()
 
     profile.save_to_fasta(args.output)

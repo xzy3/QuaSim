@@ -15,6 +15,8 @@ import os
 from quasim import *
 
 # LIST OF DEFAULT PARAMETERS INTRA
+from quasim.epistasis import Epistasis
+
 T_SIMULATION_TIME=100
 D_IMMUNE_SYSTEM_DELAY=5
 L_LIVER_SIZE=5000
@@ -61,6 +63,8 @@ if __name__=='__main__':
     parser.add_argument("-cdr", dest='cell_death_rate', type=float, default=CDR_INFECTED_CELL_DEATH_RATE)
     parser.add_argument("-bcr", dest="b_cell_rate", type=float, default=BCR_B_CELL_RATE)
     parser.add_argument("-min_ab", dest="min_ab_eff", type=float, default=None)
+    parser.add_argument("-pm", dest="pm", type=float, default=DEFAULT_ANTIBODY_EFFECTIVENESS)
+    parser.add_argument("-pmm", dest="pmm", type=float, default=AB_EFFECTIVENESS_NEIGHBOR)
     parser.add_argument("-o", dest='out_dir', type=str, required=True)
     parser.add_argument("-i", dest='input', type=argparse.FileType('r'), default=sys.stdin)
     args = parser.parse_args()
@@ -91,11 +95,13 @@ if __name__=='__main__':
     Variant.creact = True
     T = args.T
 
+    pm = args.pm
+    pmm = args.pmm
+
     # Read input and prepare simulation
     fasta = list(SeqIO.parse(args.input, 'fasta'))
 
-    Variant.profile.load_from_fasta(fasta)
-    Variant.profile.build_mutations_map()
+    Variant.epistasis = Epistasis(fasta)
 
     initial = random.choice(fasta)
 
@@ -116,7 +122,7 @@ if __name__=='__main__':
         tI = []
 
         #########################
-        ihost.tick(j, mr, cdr, bcr, delay, cir)
+        ihost.tick(j, mr, cdr, bcr, delay, cir, pm=pm, pmm=pmm)
         v_count = sum(i.count() for i in ihost.blood.variants)
         variants = sum(1 if i.count() > 0 else 0 for i in ihost.blood.variants)
 

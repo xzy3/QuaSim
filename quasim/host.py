@@ -22,7 +22,7 @@ import networkx as nx
 import random
 
 DEFAULT_ANTIBODY_EFFECTIVENESS=0.99
-AB_EFFECTIVENESS_MULTIPLIER=0.98
+AB_EFFECTIVENESS_NEIGHBOR=0.01
 MIN_AB_EFFICIENCY=0.5
 
 class Host:
@@ -38,12 +38,12 @@ class Host:
         self.rnd = random.Random()
         self.epitopes = self.rnd.sample(Virion.epitopes.epitope_pos, Virion.epitopes.size())
 
-    def tick(self, i, mr, cdr, bcr, delay, cir):
+    def tick(self, i, mr, cdr, bcr, delay, cir, pm=DEFAULT_ANTIBODY_EFFECTIVENESS, pmm=AB_EFFECTIVENESS_NEIGHBOR):
         self.blood.flow(bcr=bcr, delay=delay, cir=cir)
         self.blood.infect(
             self.liver.produce_virions(i, mr),
-            abr=DEFAULT_ANTIBODY_EFFECTIVENESS,
-            fabr=AB_EFFECTIVENESS_MULTIPLIER)
+            pm,
+            pmm)
         for c in self.liver.cells:
             if random.random() < cdr:
                 c.uninfect()
@@ -61,20 +61,29 @@ class Blood:
         self.host = host
         self.antibodies = defaultdict(lambda: False)
 
-    def infect(self, virions, abr=DEFAULT_ANTIBODY_EFFECTIVENESS, fabr=AB_EFFECTIVENESS_MULTIPLIER):
+    def infect(self, virions, pm=DEFAULT_ANTIBODY_EFFECTIVENESS, pmm=AB_EFFECTIVENESS_NEIGHBOR):
+        """
+        Cross-immunoreaction is implemented here
+        Local variable k is the amount of targeted neighbors
+        
+        :param virions: 
+        :param pm: default antibody effectiveness
+        :param pmm: effectiveness against neighbors
+        :return: 
+        """
         if isinstance(virions, list):
             self.variants = self.variants.union(x.variant for x in virions)
         elif isinstance(virions, Virion):
             self.variants.add(virions.variant)
 
         for v in self.variants:
+            vv = v.epitope_variants[0]
+            k = sum(x.is_targeted for x in vv.neighbors)
             if v.is_targeted():
-                vv = v.epitope_variants[0]
-                power = sum(x.is_targeted for x in vv.neighbors)
-                fabr **= power
-                abr *= fabr
-                abr = max(abr, MIN_AB_EFFICIENCY)
-                v.virions[:] = [x for x in v.virions if random.random() > abr]
+                sal = ((1-pmm)**k)*pm
+            else:
+                sal = 1. - ((1-pmm)**k)
+            v.virions[:] = [x for x in v.virions if random.random() > sal]
 
     def virions(self):
         return [v for var in self.variants for v in var.virions]
