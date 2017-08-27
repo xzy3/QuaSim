@@ -98,7 +98,7 @@ class Variant:
                 if rnd < mr:
                     self.epi_seq.mutate_position(pos)
             if str(self.epi_seq) != str(self.seq):
-                n_var = next((v for v in self.host.variants if v.seq == str(self.epi_seq)),
+                n_var = next((v for v in self.host.blood.variants if v.seq == str(self.epi_seq)),
                              Variant(str(self.epi_seq), self.host))
                 self.epi_seq = EpiSeq(Variant.epistasis, self.seq)
                 return n_var
