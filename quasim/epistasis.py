@@ -10,6 +10,8 @@
 import argparse
 import itertools
 import sys
+import networkx as nx
+import random
 
 from Bio import (SeqIO)
 
@@ -22,6 +24,7 @@ class Window:
         self.onehopnet = nx.Graph()
         self.start = start
         self.end = -1
+        self.fasta = None
 
     def find_window(self, fasta):
         cond = True
@@ -40,6 +43,7 @@ class Window:
         if self.end > L: self.end = L
 
     def find_window2(self, fasta):
+        self.fasta = fasta
         L = len(fasta[0])
         self.end = self.start + 1
 
@@ -50,14 +54,14 @@ class Window:
         if not nx.is_connected(self.onehopnet) or not self.end < L:
             self.end = self.start + 1
             self.__rebuild_onehopnet()
-            print "(%i-%i) pair of unlinked positions" % (self.start, self.end)
+            sys.stderr.write("(%i-%i) pair of unlinked positions\n" % (self.start, self.end))
         if self.end > L:
             self.end = L
             self.__rebuild_onehopnet()
 
     def __rebuild_onehopnet(self):
         self.onehopnet.clear()
-        hapls = set(str(f.seq[self.start:self.end]) for f in fasta)
+        hapls = set(str(f.seq[self.start:self.end]) for f in self.fasta)
         self.onehopnet.add_nodes_from(hapls)
         self.onehopnet.add_edges_from(hh for hh in itertools.combinations(hapls, 2) if dist(hh[0], hh[1]) <= 1)
 

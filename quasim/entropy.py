@@ -125,6 +125,7 @@ class Profile:
         """
         if 0 <= pos < len(self.mut_map) and nucl in self.mut_map[pos]:
             return random.choice(self.mut_map[pos][nucl])
+        print "Pos: %i Nucl: %s" % (pos, nucl)
         return None
 
     @staticmethod
@@ -171,4 +172,4 @@ if __name__=='__main__':
     #print '\n'.join(map(str, profile.get_positional_entropy()))
     print '\n'.join('\t'.join(map(str, e.values())) for e in profile.profile)
     profile.build_mutations_map()
-    # print profile.mut_map
+    print profile.mut_map

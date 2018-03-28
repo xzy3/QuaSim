@@ -65,11 +65,11 @@ class Blood:
         """
         Cross-immunoreaction is implemented here
         Local variable k is the amount of targeted neighbors
-        
-        :param virions: 
+
+        :param virions:
         :param pm: default antibody effectiveness
         :param pmm: effectiveness against neighbors
-        :return: 
+        :return:
         """
         if isinstance(virions, list):
             self.variants = self.variants.union(x.variant for x in virions)
@@ -80,7 +80,7 @@ class Blood:
             vv = v.epitope_variants[0]
             k = sum(x.is_targeted for x in vv.neighbors)
             if v.is_targeted():
-                sal = ((1-pmm)**k)*pm
+                sal = pm #((1-pmm)**k)*pm II level of crossimmunoreactivity disabled for now
             else:
                 sal = 1. - ((1-pmm)**k)
             v.virions[:] = [x for x in v.virions if random.random() > sal]

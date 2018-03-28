@@ -17,6 +17,7 @@ from Bio import (SeqIO)
 from entropy import Profile
 
 DEFAULT_K_RANGE=range(1,15)
+DEFAULT_N=500
 
 def mean(values):
     assert isinstance(values, collections.Iterable)
@@ -41,6 +42,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", dest='input', type=argparse.FileType('r'), required=True)
     parser.add_argument("-k", dest="k", nargs='+', type=int, default=DEFAULT_K_RANGE)
+    parser.add_argument("-n", dest="n", type=int, default=DEFAULT_N)
     parser.add_argument("-p", dest="pattern", type=str, default="")
     parser.add_argument("-o", dest='output', type=argparse.FileType('w+'), default=sys.stdout)
     args = parser.parse_args()
@@ -49,6 +51,8 @@ if __name__=='__main__':
 
     ks = args.k
     patt = args.pattern
+    n = args.n
+    fasta = fasta[:n] if n <= len(fasta) else fasta
     actual =  get_k_entropies(fasta, ks)
 
     p = Profile()
@@ -57,4 +61,4 @@ if __name__=='__main__':
     random_fasta = [s.seq for s in p.seqs]
     randomized = get_k_entropies(random_fasta, ks)
 
-    print "Ratio\t%s" % join_tab_array(actual/randomized)
+    print "\t%s" % join_tab_array(actual/randomized)
