@@ -158,12 +158,10 @@ if __name__=='__main__':
 
     start = args.start
 
-    fasta = list(SeqIO.parse(args.input, FASTA))
+    fasta = list(SeqIO.parse(args.input, 'fasta'))
     input_seqs = fasta if args.input_seqs is None else list(SeqIO.parse(args.input_seqs, FASTA))
 
     # Variant.epistasis = Epistasis(fasta)
-    Variant.profile.load_from_fasta(fasta)
-    Variant.profile.build_mutations_map()
 
     initial = random.choice(input_seqs)
 
@@ -190,8 +188,6 @@ if __name__=='__main__':
               "# of virions\t"
               "# of variants\n"
               )
-
-
 
     for j in range(start, T):
         tI = []
@@ -226,3 +222,4 @@ if __name__=='__main__':
     nx.write_pajek(filter_dead_ancestries(ihost.liver.gen_tree, ihost.blood.variants), out_dir_f % "gen_tree_alive.net")
 
 
+>>>>>>> fca1f5d1efea3a8754d6c50fdfbcc7f22a97498a

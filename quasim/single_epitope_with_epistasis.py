@@ -19,7 +19,6 @@ from quasim import *
 from quasim.epistasis import Epistasis
 from quasim.single_epitope_with_profile import (get_diversity, get_divergence)
 
-
 def print_sample(ihost, j, count_threshold=0):
     i = 0
     variants = filter(lambda v: v.count() > count_threshold, ihost.blood.variants)

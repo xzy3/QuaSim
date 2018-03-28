@@ -211,5 +211,3 @@ if __name__=='__main__':
     nx.write_pajek(ihost.liver.gen_tree, out_dir_f % "gen_tree.net")
     nx.write_edgelist(ihost.liver.gen_tree, out_dir_f % "gen_tree.edges")
     nx.write_pajek(filter_dead_ancestries(ihost.liver.gen_tree, ihost.blood.variants), out_dir_f % "gen_tree_alive.net")
-
-
